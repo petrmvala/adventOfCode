@@ -1,11 +1,10 @@
-# adventOfCode2023
-Advent of Code 2023
+# Advent of Code
 
 ## How to use
 
 No fancy. For each day:
-* create folder `dayxy/`
-* cd `dayxy/`
+* create folder `YYYY_DD/`
+* cd `YYYY_DD/`
 * `touch main{,_test}.go data.txt`
 * ...
 * `go test -v`
