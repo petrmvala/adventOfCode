@@ -6,17 +6,23 @@ import (
 	"testing/fstest"
 )
 
-const sampleData = `3   4
-4   3
-2   5
-1   3
-3   9
-3   3
+const sampleData = `7 6 4 2 1
+1 2 7 8 9
+9 7 6 2 1
+1 3 2 4 5
+8 6 4 4 1
+1 3 6 7 9
 `
 
 var sample = Data{
-	Left:  []int{3, 4, 2, 1, 3, 3},
-	Right: []int{4, 3, 5, 3, 9, 3},
+	Reports: [][]int{
+		{7, 6, 4, 2, 1},
+		{1, 2, 7, 8, 9},
+		{9, 7, 6, 2, 1},
+		{1, 3, 2, 4, 5},
+		{8, 6, 4, 4, 1},
+		{1, 3, 6, 7, 9},
+	},
 }
 
 func TestNewDataFromFS(t *testing.T) {
@@ -35,19 +41,19 @@ func TestNewDataFromFS(t *testing.T) {
 	}
 }
 
-func TestTotalDistance(t *testing.T) {
+func TestSafeReports(t *testing.T) {
 	data := sample
-	got := data.TotalDistance()
-	want := 11
+	got := data.SafeReports()
+	want := 2
 	if got != want {
 		t.Errorf("got %d, want %d", got, want)
 	}
 }
 
-func TestSimilarity(t *testing.T) {
+func TestSafeReportsDamper(t *testing.T) {
 	data := sample
-	got := data.Similarity()
-	want := 31
+	got := data.SafeReportsDamper()
+	want := 4
 	if got != want {
 		t.Errorf("got %d, want %d", got, want)
 	}
