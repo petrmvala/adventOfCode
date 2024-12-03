@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -15,6 +16,8 @@ const (
 	fileName        = "data.txt"
 	numberSeparator = " "
 )
+
+var ErrIndexOutOfBounds = errors.New("index out of bounds")
 
 func main() {
 	data, err := NewDataFromFS(os.DirFS("."))
@@ -60,30 +63,43 @@ func (d Data) SafeReports() int {
 	return safe
 }
 
+func damper(report []int) bool {
+	s, loc := safeReport(report)
+	if !s {
+		for _, idx := range []int{0, loc - 1, loc} {
+			r, err := removeIndex(report, idx)
+			if err != nil {
+				log.Fatal(err)
+			}
+			s, _ = safeReport(r)
+			if s {
+				return true
+			}
+		}
+		return false
+	}
+	return true
+}
+
 func (d Data) SafeReportsDamper() int {
 	safe := 0
 	for _, report := range d.Reports {
-		s, loc := safeReport(report)
-		if !s {
-			rLeft := make([]int, len(report))
-			_ = copy(rLeft, report)
-			rLeft = append(rLeft[:loc-1], report[loc:]...)
-			sLeft, _ := safeReport(rLeft)
-			rRight := make([]int, len(report))
-			_ = copy(rRight, report)
-			rRight = append(rRight[:loc], report[loc+1:]...)
-			sRight, _ := safeReport(rRight)
-			rZero := make([]int, len(report))
-			_ = copy(rZero, report)
-			rZero = report[1:]
-			sZero, _ := safeReport(rZero)
-			if !(sLeft || sRight || sZero) {
-				continue
-			}
+		if damper(report) {
+			safe++
 		}
-		safe++
 	}
 	return safe
+}
+
+// This did bite, check answer on SO
+// https://stackoverflow.com/a/57213476/3027202
+func removeIndex(slice []int, index int) ([]int, error) {
+	if index < 0 || len(slice) <= index {
+		return nil, ErrIndexOutOfBounds
+	}
+	ret := make([]int, 0)
+	ret = append(ret, slice[:index]...)
+	return append(ret, slice[index+1:]...), nil
 }
 
 func NewDataFromFS(fsys fs.FS) ([]Data, error) {

@@ -58,3 +58,24 @@ func TestSafeReportsDamper(t *testing.T) {
 		t.Errorf("got %d, want %d", got, want)
 	}
 }
+
+func TestRemoveIndex(t *testing.T) {
+	data := []int{1, 2, 3}
+	t.Run("index in bounds", func(t *testing.T) {
+		got, _ := removeIndex(data, 1)
+		want := []int{1, 3}
+		if !reflect.DeepEqual(got, want) {
+			t.Errorf("got %v, want %v", got, want)
+		}
+	})
+	t.Run("index out of bounds", func(t *testing.T) {
+		_, got := removeIndex(data, 3)
+		if got == nil {
+			t.Fatal("wanted an error but didn't get one")
+		}
+		want := ErrIndexOutOfBounds
+		if got != want {
+			t.Errorf("got %q, want %q", got, want)
+		}
+	})
+}
