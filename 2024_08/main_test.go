@@ -28,6 +28,15 @@ func TestFirstStar(t *testing.T) {
 	}
 }
 
+func TestSecondStar(t *testing.T) {
+	mat := toMatrix(sample)
+	got := SecondStar(mat)
+	want := 34
+	if got != want {
+		t.Errorf("got %d, want %d", got, want)
+	}
+}
+
 func TestGetAntennas(t *testing.T) {
 	mat := toMatrix(sample)
 	got := getAntennas(mat)

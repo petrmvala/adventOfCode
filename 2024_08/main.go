@@ -25,13 +25,61 @@ func main() {
 	mat := toMatrix(string(f))
 	first := FirstStar(mat)
 	elapsed := time.Since(start)
+	start = time.Now()
+	second := SecondStar(mat)
+	timeSecond := time.Since(start)
 	fmt.Println("first:", first, "elapsed:", elapsed)
+	fmt.Println("second:", second, "elapsed:", timeSecond)
 }
 
 func FirstStar(data [][]string) int {
 	ant := getAntennas(data)
 	nod := getAntinodes(ant, len(data), len(data[0]))
 	return len(nod)
+}
+
+func SecondStar(data [][]string) int {
+	ant := getAntennas(data)
+	nod := getHarmonics(ant, len(data), len(data[0]))
+	return len(nod)
+}
+
+func getHarmonics(antennas Antennas, lenX, lenY int) Antinodes {
+	n := Antinodes{}
+	for _, freq := range antennas {
+		for ant := 0; ant < len(freq)-1; ant++ {
+			for next := ant + 1; next < len(freq); next++ {
+				vec := Position{x: freq[next].x - freq[ant].x, y: freq[next].y - freq[ant].y}
+				i := 1
+				p := Position{
+					x: freq[ant].x,
+					y: freq[ant].y,
+				}
+				for p.x >= 0 && p.x < lenX && p.y >= 0 && p.y < lenY {
+					n[p] = true
+					p = Position{
+						x: freq[ant].x + i*vec.x,
+						y: freq[ant].y + i*vec.y,
+					}
+					i++
+				}
+				i = -2
+				p = Position{
+					x: freq[ant].x - vec.x,
+					y: freq[ant].y - vec.y,
+				}
+				for p.x >= 0 && p.x < lenX && p.y >= 0 && p.y < lenY {
+					n[p] = true
+					p = Position{
+						x: freq[ant].x + i*vec.x,
+						y: freq[ant].y + i*vec.y,
+					}
+					i--
+				}
+			}
+		}
+	}
+	return n
 }
 
 func getAntinodes(antennas Antennas, lenX, lenY int) Antinodes {
