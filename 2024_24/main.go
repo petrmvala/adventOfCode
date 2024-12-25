@@ -5,70 +5,43 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"sort"
 	"strconv"
 	"strings"
 )
 
-type Operator interface {
-	Operate(known map[string]bool) (bool, error)
+type Known map[string]int
+type Unknown map[string]Operator
+
+type Operator struct {
+	a, b, op string
 }
 
-type And struct {
-	a, b string
+func (o Operator) Operate(known Known) (int, error) {
+	var (
+		getA, getB int
+		ok         bool
+	)
+	if getA, ok = known[o.a]; !ok {
+		return -1, errors.New("not found")
+	}
+	if getB, ok = known[o.b]; !ok {
+		return -1, errors.New("not found")
+	}
+	switch o.op {
+	case "AND":
+		return getA & getB, nil
+	case "OR":
+		return getA | getB, nil
+	case "XOR":
+		return getA ^ getB, nil
+	default:
+		log.Fatalln("this is weird")
+	}
+	return -1, errors.New("never happens")
 }
 
-func (a And) String() string {
-	return fmt.Sprintf("And{a:%s, b:%s}", a.a, a.b)
-}
-func (a And) Operate(known map[string]bool) (bool, error) {
-	getA, ok := known[a.a]
-	if !ok {
-		return false, errors.New("not found")
-	}
-	getB, ok := known[a.b]
-	if !ok {
-		return false, errors.New("not found")
-	}
-	return getA && getB, nil
-}
-
-type Or struct {
-	a, b string
-}
-
-func (o Or) String() string {
-	return fmt.Sprintf("Or{a:%s, b:%s}", o.a, o.b)
-}
-func (o Or) Operate(known map[string]bool) (bool, error) {
-	getA, ok := known[o.a]
-	if !ok {
-		return false, errors.New("not found")
-	}
-	getB, ok := known[o.b]
-	if !ok {
-		return false, errors.New("not found")
-	}
-	return getA || getB, nil
-}
-
-type Xor struct {
-	a, b string
-}
-
-func (x Xor) String() string {
-	return fmt.Sprintf("Xor{a:%s, b:%s}", x.a, x.b)
-}
-func (x Xor) Operate(known map[string]bool) (bool, error) {
-	getA, ok := known[x.a]
-	if !ok {
-		return false, errors.New("not found")
-	}
-	getB, ok := known[x.b]
-	if !ok {
-		return false, errors.New("not found")
-	}
-	return getA != getB, nil
+func (o Operator) String() string {
+	return fmt.Sprintf("%s{a:%s, b:%s}", o.op, o.a, o.b)
 }
 
 func main() {
@@ -80,46 +53,27 @@ func main() {
 }
 
 func GetZet(input string) int {
-	known := map[string]bool{}
+	known := Known{}
+	unknown := Unknown{}
 
-	parts := strings.Split(input, "\n\n")
-	for _, line := range strings.Split(parts[0], "\n") {
+	for _, line := range strings.Split(input, "\n") {
 		if len(line) == 0 {
 			continue
 		}
 		if strings.Contains(line, ":") {
 			s := strings.Split(line, ": ")
-			val, err := strconv.ParseBool(s[1])
+			val, err := strconv.ParseInt(s[1], 2, 0)
 			if err != nil {
 				log.Fatal(err)
 			}
-			known[s[0]] = val
-		}
-	}
-
-	// fmt.Printf("known: %+v\n", known)
-
-	unknown := map[string]Operator{}
-	for _, line := range strings.Split(parts[1], "\n") {
-		if len(line) == 0 {
+			known[s[0]] = int(val)
 			continue
 		}
 		expression := strings.Split(line, " -> ")
 		out := expression[1]
 		in := strings.Split(expression[0], " ")
-		switch in[1] {
-		case "AND":
-			unknown[out] = And{a: in[0], b: in[2]}
-		case "OR":
-			unknown[out] = Or{a: in[0], b: in[2]}
-		case "XOR":
-			unknown[out] = Xor{a: in[0], b: in[2]}
-		default:
-			log.Fatalln("this is weird")
-		}
+		unknown[out] = Operator{a: in[0], b: in[2], op: in[1]}
 	}
-
-	// fmt.Printf("unknown: %+v\n", unknown)
 
 	for len(unknown) > 0 {
 		for k, v := range unknown {
@@ -133,43 +87,26 @@ func GetZet(input string) int {
 		}
 	}
 
-	// fmt.Printf("known: %+v\n", known)
-	// fmt.Printf("unknown: %+v\n", unknown)
-
-	type zetBit struct {
-		bit string
-		val bool
+	zet := strings.Repeat("0", 50)
+	insertBit := func(bit string, address int) string {
+		last := len(zet) - 1
+		return zet[:last-address] + bit + zet[last-address+1:]
 	}
-	zetBits := []zetBit{}
+
 	for k, v := range known {
 		if !strings.HasPrefix(k, "z") {
 			continue
 		}
-		zetBits = append(zetBits, zetBit{bit: k, val: v})
-	}
-	sort.Slice(zetBits, func(i int, j int) bool {
-		// reverse sort by string
-		return zetBits[i].bit > zetBits[j].bit
-	})
-
-	// fmt.Printf("sorted zetBits: %+v\n", zetBits)
-
-	var b strings.Builder
-	for _, bit := range zetBits {
-		if bit.val {
-			fmt.Fprintf(&b, "%b", 1)
-		} else {
-			fmt.Fprintf(&b, "%b", 0)
+		z, err := strconv.ParseInt(k[1:], 10, 0)
+		if err != nil {
+			log.Fatal(err)
 		}
+		zet = insertBit(strconv.Itoa(v), int(z))
 	}
 
-	binstr := b.String()
-	// fmt.Printf("result: %s", binstr)
-
-	res, err := strconv.ParseInt(binstr, 2, 64)
+	res, err := strconv.ParseInt(zet, 2, 64)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return int(res)
-
 }
