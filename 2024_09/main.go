@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 )
@@ -14,63 +13,70 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	data := strings.Split(string(f), "\n")
-	fmt.Println("diskmap")
-	dm := DiskMap(data[0])
-	fmt.Println("defrag")
-	df := Defrag(dm)
-	fmt.Println(df)
-	fmt.Println("Checksum:", Checksum(df))
+	data := strings.Split(string(f), "\n")[0]
+	fmt.Println("Checksum:", SumDefrag(data))
 }
 
-func DiskMap(input string) string {
-	m := ""
-	for idx, val := range strings.Split(input, "") {
-		v, err := strconv.Atoi(val)
+func SumDefrag(input string) int {
+	// println(input)
+	// f := "[%s] blockid: %d, index: %d, revindex: %d, blklen: %d, lastblklen: %d, blktype: %s, lastlblktype: %s, fileId: %d, total: %d\n"
+	in := []int{}
+	strlen := 0
+	for _, v := range strings.Split(input, "") {
+		val, err := strconv.Atoi(v)
 		if err != nil {
 			log.Fatal(err)
 		}
-		n := "."
-		if idx%2 == 0 { // current value is a file block
-			n = strconv.Itoa(idx / 2)
-		}
-		m += strings.Repeat(n, v)
+		in = append(in, val)
+		strlen += val
 	}
-	return m
-}
-
-func Defrag(input string) string {
-	// fmt.Println("input:", input)
-	d := strings.Split(input, "")
-	stop := len(d) - 1
-	for i := 0; i < stop; i++ {
-		// fmt.Println("forward index:", i, "stop:", stop, "d[i]:", d[i])
-		if d[i] != "." {
+	total := 0
+	idx := 0
+	for blk := 0; blk < len(in); blk++ {
+		blklen := in[blk]
+		// fmt.Printf(f, "block", blk, idx, strlen, blklen, -1, "N/A", "N/A", -1, total)
+		if blk%2 == 0 { // current block is a file
+			fileID := blk / 2
+			for j := 0; j < blklen; j++ {
+				total += idx * fileID
+				idx++
+				// fmt.Printf(f, "file", blk, idx, strlen, blklen, -1, "file", "N/A", fileID, total)
+				if idx >= strlen {
+					return total
+				}
+			}
 			continue
 		}
-		for d[stop] == "." {
-			stop--
-			// fmt.Println("backward index:", stop, "d[stop]:", d[stop])
+		// current block is empty space
+		for blklen > 0 {
+			// fmt.Printf(f, "empty", blk, idx, strlen, blklen, -1, "empty", "N/A", -1, total)
+			lastBlockId := len(in) / 2
+			lastBlockLen := &in[len(in)-1]
+			for *lastBlockLen > 0 && blklen > 0 {
+				// fmt.Printf(f, "lastFile", blk, idx, strlen, blklen, *lastBlockLen, "empty", "file", lastBlockId, total)
+				total += idx * lastBlockId
+				idx++
+				strlen--
+				blklen--
+				*lastBlockLen--
+				if idx >= strlen {
+					return total
+				}
+			}
+			if blklen == 0 {
+				continue
+			}
+			// lastBlockLen == 0 --> get rid of the block
+			in = in[:len(in)-1]
+			lastBlockLen = &in[len(in)-1]
+			// fmt.Printf(f, "trim", blk, idx, strlen, blklen, *lastBlockLen, "empty", "file", lastBlockId, total)
+			// only last block of space is remaining
+			if idx+*lastBlockLen >= strlen {
+				return total
+			}
+			strlen -= *lastBlockLen
+			in = in[:len(in)-1]
 		}
-		tmp := d[stop]
-		d = slices.Concat(d[:i], []string{tmp}, d[i+1:stop], []string{"."}, d[stop+1:])
-		stop--
 	}
-	return strings.Join(d, "")
-}
-
-func Checksum(input string) int {
-	d := strings.Split(input, "")
-	sum := 0
-	for i, n := range d {
-		if n == "." {
-			break
-		}
-		val, err := strconv.Atoi(n)
-		if err != nil {
-			log.Fatal(err)
-		}
-		sum += i * val
-	}
-	return sum
+	return total
 }
