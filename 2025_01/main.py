@@ -26,9 +26,7 @@ def second(lines):
             delta *= -1
 
         rev = dial + delta
-        if rev < 0 or 99 < rev:
-            password += abs(rev // 100)
-
+        password += abs(rev // 100)
         dial = rev % 100
 
     print(f"second: {password}")
